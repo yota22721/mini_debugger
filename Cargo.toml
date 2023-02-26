@@ -1,0 +1,13 @@
+[package]
+name = "mini_debugger"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+goblin = "0.6.0"
+libc = "0.2.139"
+linux-personality = "1.0.0"
+nix = "0.26"
+rustyline = "11.0.0"
