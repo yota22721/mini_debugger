@@ -17,13 +17,14 @@ use linux_personality::personality;
 
 struct  DebuggerState{
     pid:Pid,
-    breakpoints:HashMap<u64,u64>
+    breakpoints:HashMap<u64,u64>,
 }
 impl DebuggerState{
     pub fn new(pid:Pid)->Self{
         Self{
             pid,
             breakpoints:HashMap::new(),
+            
         }
     }
 
@@ -36,6 +37,7 @@ impl DebuggerState{
                     let parts:Vec<&str> = line.trim().splitn(2, ' ').collect();
                     match parts[0]{
                         "b"=>{
+                            
                             let addr = u64::from_str_radix(parts[1], 16)?;
                             match set_breakpoint(self.pid, addr){
                                 Ok(o)=>{
@@ -59,7 +61,6 @@ impl DebuggerState{
                             }
                         }
                         "c"=>{
-
                             ptrace::cont(self.pid, None)?;
                             wait_trap(self.pid, &self.breakpoints);
                         }
@@ -69,9 +70,6 @@ impl DebuggerState{
                         }
                         "regs"=>{
                             print_registers(self.pid);
-                        }
-                        "dump"=>{
-                            break;
                         }
                         "q"=>{
                             break;
@@ -197,6 +195,15 @@ fn wait_trap(pid: Pid, saved_values: &HashMap<u64, u64>){
             }
 }
 
+fn run_elf(fp:&String) {
+    ptrace::traceme().unwrap();
+    personality(linux_personality::ADDR_NO_RANDOMIZE)
+        .expect("[!] cannot set personality");
+    Command::new(fp).exec();
+    exit(0);
+
+}
+
 fn main() ->Result<(),Box<dyn std::error::Error>> {
 
     /* Get a elf file */
@@ -213,11 +220,7 @@ fn main() ->Result<(),Box<dyn std::error::Error>> {
     /* Detach child process from parent */
     match unsafe {fork()}{
         Ok(nix::unistd::ForkResult::Child)=>{
-            ptrace::traceme().unwrap();
-            personality(linux_personality::ADDR_NO_RANDOMIZE)
-                .expect("[!] cannot set personality");
-            Command::new(filepath).exec();
-            exit(0);
+            run_elf(filepath);
         }
         Ok(nix::unistd::ForkResult::Parent { child })=>{
             let mut state = DebuggerState::new(child);
